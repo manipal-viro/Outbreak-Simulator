@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Outbreak Investigation Simulator</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.9/standalone/umd/vis-network.min.js"></script>
+<style>
+:root{--ink:#14242b;--field:#2f5d50;--paper:#eef1ec;--card:#fff;--line:#c7d0ca;--sig:#e0a100;--bad:#b3402f;--mute:#5d6c68}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;height:100vh;display:flex;flex-direction:column}
+h1,h2{font-family:Georgia,"Times New Roman",serif;margin:0}
+header{display:flex;align-items:center;gap:20px;padding:10px 18px;background:var(--ink);color:#eef1ec;flex-wrap:wrap}
+header h1{font-size:19px;letter-spacing:.2px}
+.sub{color:#9fb3ad;font-size:13px}
+.trust{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13px}
+.bar{width:180px;height:12px;background:#33454c;border-radius:6px;overflow:hidden}
+.bar i{display:block;height:100%;width:60%;background:var(--sig);transition:width .5s,background .5s}
+button{font:inherit;cursor:pointer}
+.btn{background:var(--field);color:#fff;border:0;border-radius:6px;padding:7px 14px}
+.btn.ghost{background:transparent;border:1px solid #6f8a83;color:#eef1ec}
+.btn:disabled{opacity:.5;cursor:default}
+main{flex:1;display:grid;grid-template-columns:330px 1fr;min-height:0}
+aside{border-right:1px solid var(--line);overflow:auto;padding:14px;display:flex;flex-direction:column;gap:16px}
+aside h2{font-size:15px;margin-bottom:6px}
+.loc{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:7px 10px;margin-bottom:5px}
+.loc.on{border-color:var(--field);box-shadow:inset 4px 0 0 var(--field)}
+.tags{display:flex;flex-wrap:wrap;gap:5px}
+.tag{background:#dfe9e4;border-radius:4px;padding:2px 8px;font-size:13px}
+.tag.rh{background:#f1ddd8;color:var(--bad)}
+#graph{height:210px;background:var(--card);border:1px solid var(--line);border-radius:6px}
+section.dlg{display:flex;flex-direction:column;min-height:0}
+.who{display:flex;gap:10px;padding:10px 18px;border-bottom:1px solid var(--line);overflow-x:auto;background:#e4eae6}
+.who button{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:4px 12px 4px 4px;white-space:nowrap}
+.who button.on{border-color:var(--field);background:#fff;box-shadow:0 0 0 2px var(--field)}
+.av{width:30px;height:30px;border-radius:50%;background:var(--field);color:#fff;display:grid;place-items:center;font-size:13px;object-fit:cover}
+#log{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:12px}
+.m{max-width:640px;padding:10px 14px;border-radius:10px;background:var(--card);border:1px solid var(--line)}
+.m.u{align-self:flex-end;background:var(--field);color:#fff;border-color:var(--field)}
+.m p{margin:0 0 6px}.m p:last-child{margin:0}
+.m .n{font-size:12px;color:var(--mute);margin-bottom:2px}
+.sys{align-self:center;font-size:13px;color:var(--mute);text-align:center}
+.sys.bad{color:var(--bad)}
+#chips{display:flex;gap:8px;padding:0 18px 8px;flex-wrap:wrap}
+.chip{background:var(--card);border:1px solid var(--field);color:var(--ink);border-radius:8px;padding:6px 10px;text-align:left;font-size:14px;flex:1 1 200px}
+.chip b{display:block;font-size:12px;color:var(--field)}
+.chip:hover{background:#e4eae6}
+form{display:flex;gap:8px;padding:10px 18px 16px}
+input,select,textarea{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:6px;width:100%}
+.dim{opacity:.55;pointer-events:none}
+dialog{border:0;border-radius:10px;padding:22px;max-width:440px;width:92%}
+dialog::backdrop{background:rgba(20,36,43,.6)}
+dialog label{display:block;margin:10px 0 3px;font-size:13px;color:var(--mute)}
+@media(max-width:800px){body{height:auto}main{grid-template-columns:1fr}aside{border-right:0}#log{min-height:50vh}.bar{width:100px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+:focus-visible{outline:3px solid var(--sig);outline-offset:2px}
+</style></head>
+<body>
+<header>
+ <div><h1>Outbreak Investigation Simulator</h1><div class="sub" id="caseName">Loading case…</div></div>
+ <div class="trust">Village trust <div class="bar"><i id="tbar"></i></div><b id="tval">60%</b></div>
+ <button class="btn ghost" id="keyBtn">API key</button>
+</header>
+<main>
+ <aside>
+  <div><h2>Locations</h2><div id="locs"></div></div>
+  <div><h2>Evidence notebook</h2><div class="tags" id="ev"><span class="sub">Nothing logged yet. Ask questions to find clues.</span></div></div>
+  <div><h2>Contact tracing</h2><div id="graph"></div></div>
+  <button class="btn" id="reportBtn">Submit containment report</button>
+</aside>
+ <section class="dlg">
+  <div class="who" id="who"></div>
+  <div id="log"></div>
+  <div id="chips"></div>
+  <form id="f"><input id="txt" placeholder="Type your own question or statement…" autocomplete="off"><button class="btn" id="send">Send</button></form>
+ </section>
+</main>
+
+<dialog id="keyDlg"><form method="dialog" onsubmit="return false">
+ <h2>Connect an AI model</h2>
+ <p class="sub" style="color:var(--mute)">Your key stays in this browser tab (session storage) and is sent only to the provider you choose. Use a classroom or low-limit key.</p>
+ <label>Provider</label><select id="prov"><option value="gemini">Google Gemini</option><option value="openai">OpenAI</option></select>
+ <label>Model</label><input id="model">
+ <label>API key</label><input id="key" type="password" autocomplete="off">
+ <p><button class="btn" id="saveKey">Save and start</button></p>
+</form></dialog>
+
+<dialog id="repDlg"><h2>Containment report</h2>
+ <label>Suspected pathogen and category</label><textarea id="r1" rows="2"></textarea>
+ <label>Exposure vector and transmission route</label><textarea id="r2" rows="2"></textarea>
+ <label>Containment plan</label><textarea id="r3" rows="4"></textarea>
+ <p><button class="btn" id="subRep">Submit to District Health Officer</button> <button class="btn ghost" style="color:var(--ink);border-color:var(--line)" onclick="repDlg.close()">Cancel</button></p>
+ <p class="sub" id="repMsg"></p></dialog>
+
+<script type="application/json" id="embeddedCase">
+{"case_id":"case_01","case_title":"The Mystery Fever of Rampur","location_name":"Rampur Village, District West",
+"ground_truth":{"disease_name":"Nipah Virus","pathogen_type":"RNA Virus (Henipavirus)","primary_vector":"Raw Date Palm Sap contaminated by Fruit Bats","transmission_mode":"Direct contact with body fluids / ingestion of contaminated sap","incubation_days":"4 to 14 days","symptoms":["High Fever","Acute Encephalitis / Confusion","Respiratory Distress"]},
+"red_herrings":["Broken community water pump (suspected Cholera)","Pesticide spray used on nearby sugarcane fields (suspected chemical poisoning)"],
+"starting_state":{"village_trust":60,"unlocked_contacts":["Patient 1","Patient 2"],"evidence_logged":[]},
+"npcs":{
+"patient_1":{"name":"Ramesh (Patient 1)","role":"Index Case / Farmer","location":"Index House","portrait":"assets/images/patient1.png","clue_to_reveal":"Ate fresh date palm sap gathered near the sacred grove 5 days ago. His cousin Vikram tapped it. He is weak and confused."},
+"doctor":{"name":"Dr. Sharma","role":"Treating Doctor","location":"Community Health Center","portrait":"assets/images/doctor.png","lab_data":"CSF shows encephalitis signs; blood work rules out bacterial cholera."},
+"asha_worker":{"name":"Rani","role":"ASHA Community Health Worker","location":"Community Health Center","portrait":"assets/images/asha.png","community_insight":"Knows 3 other villagers running fevers who are hiding in their homes in the east hamlet; Baba told them hospital needles are harmful."},
+"baba":{"name":"Baba Kaladev","role":"Local Faith Healer","location":"Temple Grove","portrait":"assets/images/baba.png","belief":"Claims deaths are a curse because trees were cut near the grove. Only if treated respectfully, admits big bats roost in the grove's date palms and drink from sap pots."},
+"dho":{"name":"Dr. Verma","role":"District Health Officer","location":"District Office","portrait":"assets/images/dho.png","unlock_requirement":"Needs 3 confirmed linked contacts + 1 identified transmission vector."}}}
+</script>
+
+<script>
+const $=s=>document.querySelector(s);
+const S={c:null,trust:60,ev:[],npc:null,loc:null,chat:{},over:false,busy:false,nodes:null,edges:null,net:null,
+ cfg:JSON.parse(sessionStorage.getItem('cfg')||'{}')};
+const DEF={gemini:'gemini-2.5-flash',openai:'gpt-4o-mini'};
+const slug=s=>s.toLowerCase().replace(/[^a-z0-9]+/g,'_');
+
+/* ---------- Case loader & state ---------- */
+async function load(){
+ try{S.c=await (await fetch('data/case-01.json')).json()}catch(e){S.c=JSON.parse($('#embeddedCase').textContent)}
+ const c=S.c;S.trust=c.starting_state.village_trust;
+ $('#caseName').textContent=c.case_title+' · '+c.location_name;
+ initGraph();
+ c.starting_state.unlocked_contacts.forEach((n,i)=>addNode('patient_'+(i+1),i?n:'Ramesh (P1)'));
+ const locs=[...new Set(Object.values(c.npcs).map(n=>n.location))];
+ $('#locs').innerHTML=locs.map(l=>`<button class="loc" data-l="${l}">${l}</button>`).join('');
+ document.querySelectorAll('.loc').forEach(b=>b.onclick=()=>goLoc(b.dataset.l));
+ renderTrust();goLoc(locs[0]);
+ if(!S.cfg.key)openKey();
+}
+
+/* ---------- Locations / NPCs ---------- */
+function goLoc(l){
+ S.loc=l;document.querySelectorAll('.loc').forEach(b=>b.classList.toggle('on',b.dataset.l===l));
+ const list=Object.entries(S.c.npcs).filter(([,n])=>n.location===l);
+ $('#who').innerHTML=list.map(([k,n])=>`<button data-k="${k}">${av(n)}${n.name}</button>`).join('');
+ document.querySelectorAll('#who button').forEach(b=>b.onclick=()=>openNpc(b.dataset.k));
+ openNpc(list[0][0]);
+}
+function av(n){const i=n.name.split(' ').map(w=>w[0]).slice(0,2).join('');
+ return `<img class="av" src="${n.portrait||''}" alt="" onerror="this.outerHTML='<span class=&quot;av&quot;>${i}</span>'">`}
+const vectorFound=()=>S.ev.some(e=>/sap|bat|vector/i.test(e.tag));
+const linkCount=()=>S.edges.length;
+function locked(k){return k==='dho'&&!(linkCount()>=3&&vectorFound())}
+
+function openNpc(k){
+ S.npc=k;
+ document.querySelectorAll('#who button').forEach(b=>b.classList.toggle('on',b.dataset.k===k));
+ const n=S.c.npcs[k];S.chat[k]=S.chat[k]||[];renderLog();
+ if(locked(k)){say(`${n.name} will not meet you yet. Bring at least 3 linked contacts and an identified transmission vector.`,'sys');chips([]);return}
+ if(!S.chat[k].length)ask('(The investigator arrives and introduces themselves.)',true);else chips(S.chat[k].chips||[]);
+}
+
+/* ---------- Dialogue ---------- */
+function renderLog(){
+ $('#log').innerHTML='';
+ (S.chat[S.npc]||[]).forEach(m=>{if(!m.hidden)bubble(m)});
+}
+function bubble(m){
+ const d=document.createElement('div');
+ if(m.role==='sys'){d.className='sys'+(m.bad?' bad':'');d.textContent=m.text}
+ else{d.className='m '+(m.role==='user'?'u':'');
+  const n=S.c.npcs[S.npc];
+  d.innerHTML=(m.role==='user'?'':`<div class="n">${n.name}</div>`)+marked.parse(m.text,{breaks:true})}
+ $('#log').appendChild(d);$('#log').scrollTop=1e9;
+}
+function say(t,role,bad){const m={role,text:t,bad};(S.chat[S.npc]=S.chat[S.npc]||[]).push(m);bubble(m)}
+function chips(list){
+ $('#chips').innerHTML=list.map((c,i)=>`<button class="chip" data-i="${i}"><b>${c.strategy}</b>${c.text}</button>`).join('');
+ document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>ask(list[b.dataset.i].text));
+}
+$('#f').onsubmit=e=>{e.preventDefault();const v=$('#txt').value.trim();if(v){$('#txt').value='';ask(v)}};
+
+async function ask(text,hidden){
+ if(S.busy||S.over)return;
+ if(!S.cfg.key){openKey();return}
+ const k=S.npc,n=S.c.npcs[k],h=S.chat[k];
+ const um={role:'user',text,hidden};h.push(um);if(!hidden)bubble(um);
+ S.busy=true;document.body.classList.add('dim-ui');chips([]);
+ const wait=document.createElement('div');wait.className='sys';wait.textContent=n.name+' is thinking…';$('#log').appendChild(wait);
+ try{
+  const r=await callLLM(sysPrompt(n),h.filter(m=>m.role!=='sys').map(m=>({role:m.role,text:m.text})));
+  wait.remove();apply(r,k);
+ }catch(err){wait.remove();h.pop();say('Connection problem: '+err.message+'. Check your API key and model name.','sys',true);chips(h.chips||[])}
+ S.busy=false;
+}
+function apply(r,k){
+ const h=S.chat[k];h.push({role:'assistant',text:r.reply});bubble(h[h.length-1]);
+ h.chips=(r.chips||[]).slice(0,3);chips(h.chips);
+ const d=Math.max(-20,Math.min(10,+r.trust_delta||0));
+ if(d){S.trust=Math.max(0,Math.min(100,S.trust+d));say(`Village trust ${d>0?'+':''}${d}`,'sys',d<0);renderTrust()}
+ (r.evidence||[]).forEach(e=>{const t=e.tag.startsWith('#')?e.tag:'#'+e.tag;
+  if(!S.ev.some(x=>x.tag===t)){S.ev.push({tag:t,note:e.note});say('Logged '+t,'sys')}});
+ renderEv();
+ (r.contacts||[]).forEach(c=>{const id=slug(c.id||c.label);addNode(id,c.label);
+  const from=c.linked_to&&S.nodes.get(slug(c.linked_to))?slug(c.linked_to):null;
+  if(from&&!S.edges.get({filter:e=>e.from===from&&e.to===id}).length){S.edges.add({from,to:id});say('Contact graph updated: '+c.label,'sys')}});
+ if(S.trust<=0){S.over=true;say('Game over: villagers refuse to talk and are hiding patients. The investigation has failed.','sys',true);chips([])}
+}
+function renderTrust(){
+ $('#tbar').style.width=S.trust+'%';$('#tbar').style.background=S.trust<30?'var(--bad)':'var(--sig)';$('#tval').textContent=S.trust+'%'}
+function renderEv(){
+ $('#ev').innerHTML=S.ev.length?S.ev.map(e=>`<span class="tag ${e.tag.includes('RedHerring')?'rh':''}" title="${(e.note||'').replace(/"/g,'')}">${e.tag}</span>`).join(''):'<span class="sub">Nothing logged yet.</span>'}
+
+/* ---------- Contact graph (vis-network) ---------- */
+function initGraph(){
+ if(!window.vis){$('#graph').textContent='Graph library failed to load.';S.nodes={get:()=>null,add(){},update(){}};S.edges={add(){},get:()=>[],length:0};return}
+ S.nodes=new vis.DataSet();S.edges=new vis.DataSet();
+ S.net=new vis.Network($('#graph'),{nodes:S.nodes,edges:S.edges},{
+  nodes:{shape:'box',color:{background:'#dfe9e4',border:'#2f5d50'},font:{size:13,color:'#14242b'},margin:6},
+  edges:{arrows:'to',color:'#5d6c68'},physics:{stabilization:true}});
+}
+function addNode(id,label){if(!S.nodes.get(id))S.nodes.add({id,label})}
+Object.defineProperty(S,'edgesLen',{get:()=>S.edges.length});
+
+/* ---------- LLM module ---------- */
+function sysPrompt(n){const c=S.c;
+return `You are role-playing ${n.name}, ${n.role}, in an educational field-epidemiology game set in ${c.location_name}. Stay in character. Reply in 2-4 short sentences in plain village speech, not textbook language.
+HIDDEN TRUTH (never name the disease or give the diagnosis outright; let the investigator infer it): ${JSON.stringify(c.ground_truth)}. Red herrings villagers believe: ${JSON.stringify(c.red_herrings)}.
+YOUR KNOWLEDGE (only share what you would plausibly know): ${JSON.stringify(n)}.
+Reveal your key clue only when the investigator's question is relevant and respectful. If village trust is below 35, be guarded and withhold.
+STATE: village trust ${S.trust}/100. Evidence so far: ${S.ev.map(e=>e.tag).join(', ')||'none'}. Contact graph node ids: ${(S.nodes.get()||[]).map(x=>x.id+'='+x.label).join('; ')}.
+Rude, mocking or threatening behavior: trust_delta -5 to -20. Respect and cultural sensitivity: +2 to +10. Otherwise 0.
+Return ONLY JSON: {"reply":"...","chips":[{"strategy":"Clinical","text":"..."},{"strategy":"Empathetic","text":"..."},{"strategy":"Confrontational","text":"..."}],"trust_delta":0,"evidence":[{"tag":"#CamelCaseTag","note":"..."}],"contacts":[{"id":"slug","label":"Name","linked_to":"existing node id or null"}]}
+Add evidence or contacts only if your reply actually revealed them. Use #RedHerring_X tags when a red herring is ruled out. Chips are first-person lines the investigator could say next, each a distinct approach.`}
+
+async function callLLM(system,msgs){
+ const {provider:p='gemini',key,model}=S.cfg;let txt;
+ if(p==='gemini'){
+  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model||DEF.gemini}:generateContent?key=${encodeURIComponent(key)}`,{method:'POST',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:msgs.map(m=>({role:m.role==='user'?'user':'model',parts:[{text:m.text}]})),generationConfig:{responseMimeType:'application/json'}})});
+  const j=await r.json();if(!r.ok)throw new Error(j.error?.message||r.status);txt=j.candidates[0].content.parts[0].text;
+ }else{
+  const r=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+key},
+   body:JSON.stringify({model:model||DEF.openai,response_format:{type:'json_object'},messages:[{role:'system',content:system},...msgs.map(m=>({role:m.role,content:m.text}))]})});
+  const j=await r.json();if(!r.ok)throw new Error(j.error?.message||r.status);txt=j.choices[0].message.content;
+ }
+ try{return JSON.parse(txt.replace(/```json|```/g,'').trim())}catch(e){return {reply:txt,chips:[],trust_delta:0}}
+}
+
+/* ---------- Modals ---------- */
+function openKey(){$('#prov').value=S.cfg.provider||'gemini';$('#model').value=S.cfg.model||DEF[$('#prov').value];$('#key').value=S.cfg.key||'';$('#keyDlg').showModal()}
+$('#prov').onchange=()=>$('#model').value=DEF[$('#prov').value];
+$('#keyBtn').onclick=openKey;
+$('#saveKey').onclick=()=>{
+ S.cfg={provider:$('#prov').value,model:$('#model').value.trim(),key:$('#key').value.trim()};
+ try{sessionStorage.setItem('cfg',JSON.stringify(S.cfg))}catch(e){}
+ $('#keyDlg').close();if(S.cfg.key&&S.npc&&!locked(S.npc)&&!(S.chat[S.npc]||[]).length)ask('(The investigator arrives and introduces themselves.)',true)};
+const repDlg=$('#repDlg');
+$('#reportBtn').onclick=()=>{$('#repMsg').textContent=(linkCount()>=3&&vectorFound())?'':'The District Health Officer will want 3 linked contacts and an identified vector first, but you can draft your report.';repDlg.showModal()};
+$('#subRep').onclick=()=>{$('#repMsg').textContent='Report saved. The AI Evaluator and grade card are the next module to build.'};
+load();
+</script>
+</body></html>
