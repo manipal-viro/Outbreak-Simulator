@@ -2,249 +2,218 @@
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Outbreak Investigation Simulator</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.9/standalone/umd/vis-network.min.js"></script>
 <style>
 :root{--ink:#14242b;--field:#2f5d50;--paper:#eef1ec;--card:#fff;--line:#c7d0ca;--sig:#e0a100;--bad:#b3402f;--mute:#5d6c68}
 *{box-sizing:border-box}
 body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;height:100vh;display:flex;flex-direction:column}
-h1,h2{font-family:Georgia,"Times New Roman",serif;margin:0}
+h1,h2{font-family:Georgia,serif;margin:0}
 header{display:flex;align-items:center;gap:20px;padding:10px 18px;background:var(--ink);color:#eef1ec;flex-wrap:wrap}
-header h1{font-size:19px;letter-spacing:.2px}
-.sub{color:#9fb3ad;font-size:13px}
+header h1{font-size:19px}.sub{color:#9fb3ad;font-size:13px}
 .trust{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13px}
 .bar{width:180px;height:12px;background:#33454c;border-radius:6px;overflow:hidden}
-.bar i{display:block;height:100%;width:60%;background:var(--sig);transition:width .5s,background .5s}
+.bar i{display:block;height:100%;background:var(--sig);transition:width .5s,background .5s}
 button{font:inherit;cursor:pointer}
 .btn{background:var(--field);color:#fff;border:0;border-radius:6px;padding:7px 14px}
-.btn.ghost{background:transparent;border:1px solid #6f8a83;color:#eef1ec}
-.btn:disabled{opacity:.5;cursor:default}
+.btn:disabled{opacity:.45;cursor:not-allowed}
 main{flex:1;display:grid;grid-template-columns:330px 1fr;min-height:0}
 aside{border-right:1px solid var(--line);overflow:auto;padding:14px;display:flex;flex-direction:column;gap:16px}
 aside h2{font-size:15px;margin-bottom:6px}
 .loc{display:block;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:7px 10px;margin-bottom:5px}
 .loc.on{border-color:var(--field);box-shadow:inset 4px 0 0 var(--field)}
 .tags{display:flex;flex-wrap:wrap;gap:5px}
-.tag{background:#dfe9e4;border-radius:4px;padding:2px 8px;font-size:13px}
-.tag.rh{background:#f1ddd8;color:var(--bad)}
+.tag{background:#dfe9e4;border-radius:4px;padding:2px 8px;font-size:13px}.tag.rh{background:#f1ddd8;color:var(--bad)}
 #graph{height:210px;background:var(--card);border:1px solid var(--line);border-radius:6px}
 section.dlg{display:flex;flex-direction:column;min-height:0}
 .who{display:flex;gap:10px;padding:10px 18px;border-bottom:1px solid var(--line);overflow-x:auto;background:#e4eae6}
 .who button{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:4px 12px 4px 4px;white-space:nowrap}
-.who button.on{border-color:var(--field);background:#fff;box-shadow:0 0 0 2px var(--field)}
+.who button.on{box-shadow:0 0 0 2px var(--field)}
 .av{width:30px;height:30px;border-radius:50%;background:var(--field);color:#fff;display:grid;place-items:center;font-size:13px;object-fit:cover}
 #log{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:12px}
 .m{max-width:640px;padding:10px 14px;border-radius:10px;background:var(--card);border:1px solid var(--line)}
 .m.u{align-self:flex-end;background:var(--field);color:#fff;border-color:var(--field)}
-.m p{margin:0 0 6px}.m p:last-child{margin:0}
-.m .n{font-size:12px;color:var(--mute);margin-bottom:2px}
-.sys{align-self:center;font-size:13px;color:var(--mute);text-align:center}
-.sys.bad{color:var(--bad)}
-#chips{display:flex;gap:8px;padding:0 18px 8px;flex-wrap:wrap}
-.chip{background:var(--card);border:1px solid var(--field);color:var(--ink);border-radius:8px;padding:6px 10px;text-align:left;font-size:14px;flex:1 1 200px}
-.chip b{display:block;font-size:12px;color:var(--field)}
+.m .n{font-size:12px;color:var(--mute)}
+.sys{align-self:center;font-size:13px;color:var(--mute);text-align:center;max-width:560px}.sys.bad{color:var(--bad)}.sys.good{color:var(--field)}
+#chips{display:flex;gap:8px;padding:0 18px 8px;flex-wrap:wrap;max-height:34vh;overflow:auto}
+.chip{background:var(--card);border:1px solid var(--field);border-radius:8px;padding:6px 10px;text-align:left;font-size:14px;flex:1 1 230px}
+.chip b{display:block;font-size:12px;color:var(--field)}.chip.empathy{border-color:#a67c00}.chip.empathy b{color:#a67c00}.chip.direct{border-color:var(--bad)}.chip.direct b{color:var(--bad)}
 .chip:hover{background:#e4eae6}
-form{display:flex;gap:8px;padding:10px 18px 16px}
+form.row{display:flex;gap:8px;padding:10px 18px 16px;margin:0}
 input,select,textarea{font:inherit;padding:8px 10px;border:1px solid var(--line);border-radius:6px;width:100%}
-.dim{opacity:.55;pointer-events:none}
-dialog{border:0;border-radius:10px;padding:22px;max-width:440px;width:92%}
+dialog{border:0;border-radius:10px;padding:22px;max-width:560px;width:94%;max-height:92vh;overflow:auto}
 dialog::backdrop{background:rgba(20,36,43,.6)}
 dialog label{display:block;margin:10px 0 3px;font-size:13px;color:var(--mute)}
+.ck{display:flex;gap:8px;align-items:flex-start;margin:4px 0;color:var(--ink)}.ck input{width:auto;margin-top:5px}
+pre{white-space:pre-wrap;font:13px/1.5 ui-monospace,Menlo,monospace;background:#f3f6f4;padding:12px;border-radius:6px}
 @media(max-width:800px){body{height:auto}main{grid-template-columns:1fr}aside{border-right:0}#log{min-height:50vh}.bar{width:100px}}
-@media(prefers-reduced-motion:reduce){*{transition:none!important}}
 :focus-visible{outline:3px solid var(--sig);outline-offset:2px}
 </style></head>
 <body>
-<header>
- <div><h1>Outbreak Investigation Simulator</h1><div class="sub" id="caseName">Loading case…</div></div>
- <div class="trust">Village trust <div class="bar"><i id="tbar"></i></div><b id="tval">60%</b></div>
- <button class="btn ghost" id="keyBtn">API key</button>
-</header>
+<header><div><h1>Outbreak Investigation Simulator</h1><div class="sub" id="cn"></div></div>
+<div class="trust">Village trust <div class="bar"><i id="tb"></i></div><b id="tv"></b></div></header>
 <main>
- <aside>
-  <div><h2>Locations</h2><div id="locs"></div></div>
-  <div><h2>Evidence notebook</h2><div class="tags" id="ev"><span class="sub">Nothing logged yet. Ask questions to find clues.</span></div></div>
-  <div><h2>Contact tracing</h2><div id="graph"></div></div>
-  <button class="btn" id="reportBtn">Submit containment report</button>
+<aside>
+ <div><h2>Locations</h2><div id="locs"></div></div>
+ <div><h2>Evidence notebook</h2><div class="tags" id="ev"></div></div>
+ <div><h2>Contact tracing</h2><div id="graph"></div></div>
+ <button class="btn" id="rb" disabled>Submit containment report</button>
+ <div class="sub" id="gate" style="color:var(--mute)"></div>
 </aside>
- <section class="dlg">
-  <div class="who" id="who"></div>
-  <div id="log"></div>
-  <div id="chips"></div>
-  <form id="f"><input id="txt" placeholder="Type your own question or statement…" autocomplete="off"><button class="btn" id="send">Send</button></form>
- </section>
+<section class="dlg"><div class="who" id="who"></div><div id="log"></div><div id="chips"></div>
+<form class="row" id="f"><input id="txt" placeholder="Or type your own question…" autocomplete="off"><button class="btn">Send</button></form></section>
 </main>
 
-<dialog id="keyDlg"><form method="dialog" onsubmit="return false">
- <h2>Connect an AI model</h2>
- <p class="sub" style="color:var(--mute)">Your key stays in this browser tab (session storage) and is sent only to the provider you choose. Use a classroom or low-limit key.</p>
- <label>Provider</label><select id="prov"><option value="gemini">Google Gemini</option><option value="openai">OpenAI</option></select>
- <label>Model</label><input id="model">
- <label>API key</label><input id="key" type="password" autocomplete="off">
- <p><button class="btn" id="saveKey">Save and start</button></p>
-</form></dialog>
+<dialog id="rd"><h2>Containment report</h2>
+<label>Suspected pathogen</label><select id="r1"></select>
+<label>Exposure vector and transmission route</label><select id="r2"></select>
+<label>Containment plan (select all that apply)</label><div id="r3"></div>
+<p><button class="btn" id="sub">Submit to District Health Officer</button> <button class="btn" style="background:#6b7a76" onclick="rd.close()">Cancel</button></p>
+<pre id="card" hidden></pre></dialog>
 
-<dialog id="repDlg"><h2>Containment report</h2>
- <label>Suspected pathogen and category</label><textarea id="r1" rows="2"></textarea>
- <label>Exposure vector and transmission route</label><textarea id="r2" rows="2"></textarea>
- <label>Containment plan</label><textarea id="r3" rows="4"></textarea>
- <p><button class="btn" id="subRep">Submit to District Health Officer</button> <button class="btn ghost" style="color:var(--ink);border-color:var(--line)" onclick="repDlg.close()">Cancel</button></p>
- <p class="sub" id="repMsg"></p></dialog>
-
-<script type="application/json" id="embeddedCase">
-{"case_id":"case_01","case_title":"The Mystery Fever of Rampur","location_name":"Rampur Village, District West",
-"ground_truth":{"disease_name":"Nipah Virus","pathogen_type":"RNA Virus (Henipavirus)","primary_vector":"Raw Date Palm Sap contaminated by Fruit Bats","transmission_mode":"Direct contact with body fluids / ingestion of contaminated sap","incubation_days":"4 to 14 days","symptoms":["High Fever","Acute Encephalitis / Confusion","Respiratory Distress"]},
-"red_herrings":["Broken community water pump (suspected Cholera)","Pesticide spray used on nearby sugarcane fields (suspected chemical poisoning)"],
-"starting_state":{"village_trust":60,"unlocked_contacts":["Patient 1","Patient 2"],"evidence_logged":[]},
+<script type="application/json" id="emb">{"case_id":"case_01","case_title":"The Mystery Fever of Rampur","location_name":"Rampur Village, District West",
+"intro":"Two people in Rampur have a high fever and confusion. Villagers blame a curse or the water. Interview people, log evidence, link contacts, then report to the District Health Officer. Keep the village's trust.",
+"start":{"trust":60,"nodes":[{"id":"p1","label":"Ramesh (P1)"},{"id":"p2","label":"Patient 2"}]},
 "npcs":{
-"patient_1":{"name":"Ramesh (Patient 1)","role":"Index Case / Farmer","location":"Index House","portrait":"assets/images/patient1.png","clue_to_reveal":"Ate fresh date palm sap gathered near the sacred grove 5 days ago. His cousin Vikram tapped it. He is weak and confused."},
-"doctor":{"name":"Dr. Sharma","role":"Treating Doctor","location":"Community Health Center","portrait":"assets/images/doctor.png","lab_data":"CSF shows encephalitis signs; blood work rules out bacterial cholera."},
-"asha_worker":{"name":"Rani","role":"ASHA Community Health Worker","location":"Community Health Center","portrait":"assets/images/asha.png","community_insight":"Knows 3 other villagers running fevers who are hiding in their homes in the east hamlet; Baba told them hospital needles are harmful."},
-"baba":{"name":"Baba Kaladev","role":"Local Faith Healer","location":"Temple Grove","portrait":"assets/images/baba.png","belief":"Claims deaths are a curse because trees were cut near the grove. Only if treated respectfully, admits big bats roost in the grove's date palms and drink from sap pots."},
-"dho":{"name":"Dr. Verma","role":"District Health Officer","location":"District Office","portrait":"assets/images/dho.png","unlock_requirement":"Needs 3 confirmed linked contacts + 1 identified transmission vector."}}}
+"doctor":{"name":"Dr. Sharma","role":"Treating Doctor","location":"Community Health Center","portrait":"assets/images/doctor.png",
+ "greet":"Thank goodness you're here. Ramesh came in two days ago with high fever and confusion. Now another patient has similar signs. People say it's a curse or poisoned water.",
+ "guarded":"I'd rather not speculate yet. Let's build trust and gather more first.","fallback":"I'm not sure I follow. Try asking about lab results, other causes, or isolation.",
+ "topics":[
+ {"id":"d1","style":"clinical","label":"What do the CSF and lab results show?","keys":["csf","lab","result","test","puncture","blood"],"reply":"CSF shows raised lymphocytes and protein with no bacteria. It is acute viral encephalitis: swelling of the brain.","trust":0,"ev":[["#HighFever","Both patients febrile"],["#Encephalitis","CSF: viral encephalitis"],["#NonBacterial","No bacteria in CSF or blood"]]},
+ {"id":"d2","style":"clinical","label":"Have you ruled out cholera or typhoid?","keys":["cholera","typhoid","water","pump","bacteria","diarrhea"],"reply":"Yes. Stool and blood tests are negative and nobody has diarrhoea. The handpump has been broken for weeks, and families boil their water anyway. It is not waterborne.","trust":0,"needs":{"ev":["#NonBacterial"]},"ev":[["#RedHerring_WaterPump","Waterborne cause ruled out"]]},
+ {"id":"d3","style":"empathy","label":"Thank Dr. Sharma and ask how the clinic is coping","keys":["thank","cope","tired","help","support","how are"],"reply":"That means a lot. We're stretched thin. The second patient is Ramesh's wife, Sunita. She started shivering and getting confused yesterday.","trust":5,"ev":[["#FamilyCluster","Wife of index case now ill"]],"contacts":[{"id":"p2","label":"Sunita (P2)","from":"p1"}]},
+ {"id":"d4","style":"direct","label":"Why haven't you isolated them yet?","keys":["isolate","isolation","quarantine","ward","separate"],"reply":"We have one side room and few masks. I can isolate them now, but I need help from the district.","trust":0,"ev":[["#InfectionControlGap","Limited PPE and isolation space"]]},
+ {"id":"d5","style":"clinical","label":"When did symptoms start? What's the timeline?","keys":["incubation","when","onset","days","timeline","start"],"reply":"Fever began about 5 days ago. Ramesh says he fell ill a few days after something he hasn't fully described to me.","trust":0,"ev":[["#Incubation_5Days","Onset about 5 days after an exposure"]]}]},
+"asha_worker":{"name":"Rani","role":"ASHA Community Health Worker","location":"Community Health Center","portrait":"assets/images/asha.png",
+ "greet":"Namaste. I know every house in Rampur. How can I help?","guarded":"People are scared. I can't say more until they trust you.","fallback":"Hmm? Ask me about the villagers, the sugarcane spray, or Baba-ji.",
+ "topics":[
+ {"id":"a1","style":"empathy","label":"Ask what she is hearing in the community","keys":["village","hearing","community","people","fever","others","hiding","sick"],"reply":"Two families in the east hamlet have young men bedridden with fever. They won't come here because Baba-ji told them hospital needles will kill them.","trust":3,"needs":{"trust":45},"ev":[["#HiddenCases","Unreported fever cases in east hamlet"]],"contacts":[{"id":"ea","label":"East Hamlet case A","from":"p1"},{"id":"eb","label":"East Hamlet case B","from":"p1"}]},
+ {"id":"a2","style":"clinical","label":"Could the sugarcane pesticide spray be the cause?","keys":["pesticide","spray","sugarcane","poison","chemical"],"reply":"The spray was three weeks ago. Farmhands and cattle are fine. Only people who are confused and feverish are sick, and not all farmers.","trust":0,"ev":[["#RedHerring_Pesticide","Spray timing and spread don't fit"]]},
+ {"id":"a3","style":"direct","label":"Demand a list of everyone who is sick, now","keys":["demand","list","names","immediately"],"reply":"If you push like that, families will hide their sick even more. Please don't make me choose between you and my neighbours.","trust":-6},
+ {"id":"a4","style":"empathy","label":"Ask how to win over Baba Kaladev","keys":["baba","convince","persuade","win","kaladev"],"reply":"Respect him first. Don't argue about the curse. Ask him about the sacred grove, because he watches it every night.","trust":6,"ev":[["#CommunityLeader","Baba influences health-seeking"]]}]},
+"patient_1":{"name":"Ramesh (Patient 1)","role":"Index Case / Farmer","location":"Index House","portrait":"assets/images/patient1.png",
+ "greet":"(Weak, confused) My head burns... please, help.","guarded":"Too tired... I can't think...","fallback":"(Ramesh mumbles and looks away.) Ask about what I ate... or the water.",
+ "topics":[
+ {"id":"r1","style":"empathy","label":"Gently ask what he ate or drank before falling ill","keys":["sap","drink","ate","food","sweet","juice","drank","eat"],"reply":"I only drank the sweet sap, two full cups of it raw, before sunrise five days ago. My cousin Vikram brought it.","trust":3,"ev":[["#RawDatePalmSap","Drank raw date palm sap 5 days ago"]],"contacts":[{"id":"vik","label":"Vikram (sap collector)","from":"p1"}]},
+ {"id":"r2","style":"clinical","label":"Did anyone share handpump water with you?","keys":["pump","handpump","water"],"reply":"Sunita fetched water from the old pump. But I felt sick before that... the water is not it.","trust":0,"ev":[["#RedHerring_WaterPump","Symptoms began before pump water"]]},
+ {"id":"r3","style":"clinical","label":"Where did Vikram get the sap and who else drank it?","keys":["vikram","cousin","grove","tapped","who else","share","palm"],"reply":"He tapped the date palms near the sacred grove. Sunita sipped some too. Vikram's children also had a cup.","trust":0,"needs":{"ev":["#RawDatePalmSap"]},"ev":[["#SapSharedHousehold","Sap shared across two households"]],"contacts":[{"id":"p2","label":"Sunita (P2)","from":"vik"}]},
+ {"id":"r4","style":"direct","label":"Order him to stay strictly in bed","keys":["order","stay","bed","must"],"reply":"(Frightened) Am I dying? Please don't shout at me...","trust":-2}]},
+"baba":{"name":"Baba Kaladev","role":"Local Faith Healer","location":"Temple Grove","portrait":"assets/images/baba.png",
+ "greet":"You city doctors bring needles into sacred land! The goddess is angry because trees were cut near the grove!","guarded":"You have not earned that from me yet. Leave me.","fallback":"Speak plainly, outsider. Ask about the grove, or do not waste my time.",
+ "topics":[
+ {"id":"b1","style":"empathy","label":"Respectfully thank Baba-ji and ask about the grove","keys":["respect","grove","sacred","namaste","thank","honor","tradition"],"reply":"(Softening) You speak with respect. The grove has been disturbed. Since the trees were cut, the village has fallen sick.","trust":6,"ev":[["#RedHerring_Curse","Curse belief; trees were cut near grove"]]},
+ {"id":"b2","style":"empathy","label":"Ask if he noticed animals near the sap pots","keys":["bat","bats","animal","night","fruit","roost","pot","nest"],"reply":"The big night-bats now nest in those palms in huge numbers. They eat the fruit and drink from the sap pots left overnight.","trust":2,"needs":{"trust":50,"topics":["b1"]},"ev":[["#FruitBatRoost","Fruit bats roost in grove palms"],["#ContaminatedSapPots","Bats drink from open sap pots"]]},
+ {"id":"b3","style":"direct","label":"Tell him the curse is dangerous misinformation","keys":["misinformation","dangerous","stupid","wrong","superstition","killing","fool"],"reply":"How dare you insult our traditions! Leave this grove at once!","trust":-15},
+ {"id":"b4","style":"empathy","label":"Ask him to tell villagers the clinic is safe","keys":["hospital","needles","clinic","safe","tell villagers","send word"],"reply":"If you honour the grove, I will tell the families the clinic is no enemy. The hidden ones will come.","trust":8,"needs":{"trust":50,"topics":["b1"]}}]},
+"dho":{"name":"Dr. Verma","role":"District Health Officer","location":"District Office","portrait":"assets/images/dho.png",
+ "greet":"I've been waiting. You have enough evidence to act. Brief me through the report form.","guarded":"Come back with evidence.","fallback":"Use the report form when you are ready.",
+ "topics":[{"id":"v1","style":"clinical","label":"Brief Dr. Verma on the situation","keys":["brief","findings","report","situation"],"reply":"Good. Submit your pathogen, vector, route and containment plan through the report button on the left.","trust":0}]}},
+"gate":{"links":3,"vectorTags":["#RawDatePalmSap","#FruitBatRoost"]},
+"report":{
+ "pathogen":{"options":["Vibrio cholerae (Cholera)","Organophosphate pesticide poisoning","Nipah virus (Henipavirus)","Japanese encephalitis virus","Rabies virus"],"answer":2},
+ "vector":{"options":["Contaminated handpump water","Pesticide residue on sugarcane","Raw date palm sap contaminated by fruit bats","Mosquito bites (Culex)","Dog bites"],"answer":2},
+ "actions":[
+  {"t":"Ban collection and sale of raw, unboiled date palm sap","good":true},
+  {"t":"Install bamboo skirts on sap pots and trees to keep bats out","good":true},
+  {"t":"Isolate the hidden east-hamlet cases and trace contacts with ASHA workers","good":true},
+  {"t":"Provide PPE and an isolation ward for the clinic","good":true},
+  {"t":"Work with Baba Kaladev and ASHA workers on community messaging","good":true},
+  {"t":"Chlorinate the handpump and declare the outbreak over","good":false},
+  {"t":"Cull the fruit bats in the grove","good":false},
+  {"t":"Spray insecticide across the village","good":false}],
+ "required":["#Encephalitis","#NonBacterial","#RawDatePalmSap","#FruitBatRoost","#RedHerring_WaterPump","#HiddenCases"]}}
 </script>
-
 <script>
-const $=s=>document.querySelector(s);
-const S={c:null,trust:60,ev:[],npc:null,loc:null,chat:{},over:false,busy:false,nodes:null,edges:null,net:null,
- cfg:JSON.parse(sessionStorage.getItem('cfg')||'{}')};
-const DEF={gemini:'gemini-2.5-flash',openai:'gpt-4o-mini'};
-const slug=s=>s.toLowerCase().replace(/[^a-z0-9]+/g,'_');
-
-/* ---------- Case loader & state ---------- */
+const $=s=>document.querySelector(s),rd=$('#rd');
+const S={trust:60,ev:[],asked:new Set(),chat:{},npc:null,over:false,min:60,done:false};
+const RUDE=/\b(stupid|idiot|fool|liar|useless|shut up|kill|damn|moron)\b/i;
 async function load(){
- try{S.c=await (await fetch('data/case-01.json')).json()}catch(e){S.c=JSON.parse($('#embeddedCase').textContent)}
- const c=S.c;S.trust=c.starting_state.village_trust;
- $('#caseName').textContent=c.case_title+' · '+c.location_name;
- initGraph();
- c.starting_state.unlocked_contacts.forEach((n,i)=>addNode('patient_'+(i+1),i?n:'Ramesh (P1)'));
+ const id=new URLSearchParams(location.search).get('case')||'case-01';
+ try{S.c=await(await fetch('data/'+id+'.json')).json()}catch(e){S.c=JSON.parse($('#emb').textContent)}
+ const c=S.c;S.trust=S.min=c.start.trust;$('#cn').textContent=c.case_title+' · '+c.location_name;
+ S.nodes=new vis.DataSet(c.start.nodes);S.edges=new vis.DataSet();
+ new vis.Network($('#graph'),{nodes:S.nodes,edges:S.edges},{nodes:{shape:'box',color:{background:'#dfe9e4',border:'#2f5d50'},font:{size:13},margin:6},edges:{arrows:'to',color:'#5d6c68'}});
  const locs=[...new Set(Object.values(c.npcs).map(n=>n.location))];
  $('#locs').innerHTML=locs.map(l=>`<button class="loc" data-l="${l}">${l}</button>`).join('');
  document.querySelectorAll('.loc').forEach(b=>b.onclick=()=>goLoc(b.dataset.l));
- renderTrust();goLoc(locs[0]);
- if(!S.cfg.key)openKey();
+ trust(0);renderEv();goLoc(locs[0]);
+ sysTo('__intro',c.intro);
 }
-
-/* ---------- Locations / NPCs ---------- */
+function sysTo(k,t,cls){(S.chat[k]=S.chat[k]||[]).push({role:'sys',text:t,cls});if(k===S.npc||k==='__intro')bubble({role:'sys',text:t,cls})}
 function goLoc(l){
- S.loc=l;document.querySelectorAll('.loc').forEach(b=>b.classList.toggle('on',b.dataset.l===l));
+ document.querySelectorAll('.loc').forEach(b=>b.classList.toggle('on',b.dataset.l===l));
  const list=Object.entries(S.c.npcs).filter(([,n])=>n.location===l);
  $('#who').innerHTML=list.map(([k,n])=>`<button data-k="${k}">${av(n)}${n.name}</button>`).join('');
- document.querySelectorAll('#who button').forEach(b=>b.onclick=()=>openNpc(b.dataset.k));
- openNpc(list[0][0]);
+ document.querySelectorAll('#who button').forEach(b=>b.onclick=()=>open(b.dataset.k));open(list[0][0]);
 }
-function av(n){const i=n.name.split(' ').map(w=>w[0]).slice(0,2).join('');
- return `<img class="av" src="${n.portrait||''}" alt="" onerror="this.outerHTML='<span class=&quot;av&quot;>${i}</span>'">`}
-const vectorFound=()=>S.ev.some(e=>/sap|bat|vector/i.test(e.tag));
-const linkCount=()=>S.edges.length;
-function locked(k){return k==='dho'&&!(linkCount()>=3&&vectorFound())}
-
-function openNpc(k){
- S.npc=k;
- document.querySelectorAll('#who button').forEach(b=>b.classList.toggle('on',b.dataset.k===k));
- const n=S.c.npcs[k];S.chat[k]=S.chat[k]||[];renderLog();
- if(locked(k)){say(`${n.name} will not meet you yet. Bring at least 3 linked contacts and an identified transmission vector.`,'sys');chips([]);return}
- if(!S.chat[k].length)ask('(The investigator arrives and introduces themselves.)',true);else chips(S.chat[k].chips||[]);
-}
-
-/* ---------- Dialogue ---------- */
-function renderLog(){
- $('#log').innerHTML='';
- (S.chat[S.npc]||[]).forEach(m=>{if(!m.hidden)bubble(m)});
+function av(n){const i=n.name.split(' ').map(w=>w[0]).slice(0,2).join('');return `<img class="av" src="${n.portrait}" alt="" onerror="this.outerHTML='<span class=&quot;av&quot;>${i}</span>'">`}
+const vec=()=>S.c.gate.vectorTags.some(t=>S.ev.some(e=>e[0]===t));
+const gateOk=()=>S.edges.length>=S.c.gate.links&&vec();
+function open(k){
+ S.npc=k;document.querySelectorAll('#who button').forEach(b=>b.classList.toggle('on',b.dataset.k===k));
+ const n=S.c.npcs[k];S.chat[k]=S.chat[k]||[];
+ if(k==='dho'&&!gateOk()){$('#log').innerHTML='';bubble({role:'sys',text:`${n.name} won't meet you yet. Bring ${S.c.gate.links} linked contacts and an identified transmission vector.`});$('#chips').innerHTML='';return}
+ if(!S.chat[k].length)S.chat[k].push({role:'npc',text:n.greet});
+ $('#log').innerHTML='';if(!S.chat[k].some(m=>m.cls==='intro'))S.chat['__intro']&&0;S.chat[k].forEach(bubble);chips();
 }
 function bubble(m){
  const d=document.createElement('div');
- if(m.role==='sys'){d.className='sys'+(m.bad?' bad':'');d.textContent=m.text}
- else{d.className='m '+(m.role==='user'?'u':'');
-  const n=S.c.npcs[S.npc];
-  d.innerHTML=(m.role==='user'?'':`<div class="n">${n.name}</div>`)+marked.parse(m.text,{breaks:true})}
+ if(m.role==='sys'){d.className='sys '+(m.cls||'');d.textContent=m.text}
+ else{d.className='m '+(m.role==='user'?'u':'');d.innerHTML=(m.role==='npc'?`<div class="n">${S.c.npcs[S.npc].name}</div>`:'')+'<span></span>';d.lastChild.textContent=m.text}
  $('#log').appendChild(d);$('#log').scrollTop=1e9;
 }
-function say(t,role,bad){const m={role,text:t,bad};(S.chat[S.npc]=S.chat[S.npc]||[]).push(m);bubble(m)}
-function chips(list){
- $('#chips').innerHTML=list.map((c,i)=>`<button class="chip" data-i="${i}"><b>${c.strategy}</b>${c.text}</button>`).join('');
- document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>ask(list[b.dataset.i].text));
+function say(role,text,cls){const m={role,text,cls};S.chat[S.npc].push(m);bubble(m)}
+function chips(){
+ const n=S.c.npcs[S.npc],left=S.over?[]:n.topics.filter(t=>!S.asked.has(t.id));
+ $('#chips').innerHTML=left.map(t=>`<button class="chip ${t.style}" data-i="${t.id}"><b>${t.style[0].toUpperCase()+t.style.slice(1)}</b>${t.label}</button>`).join('');
+ document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>run(n.topics.find(t=>t.id===b.dataset.i),true));
 }
-$('#f').onsubmit=e=>{e.preventDefault();const v=$('#txt').value.trim();if(v){$('#txt').value='';ask(v)}};
-
-async function ask(text,hidden){
- if(S.busy||S.over)return;
- if(!S.cfg.key){openKey();return}
- const k=S.npc,n=S.c.npcs[k],h=S.chat[k];
- const um={role:'user',text,hidden};h.push(um);if(!hidden)bubble(um);
- S.busy=true;document.body.classList.add('dim-ui');chips([]);
- const wait=document.createElement('div');wait.className='sys';wait.textContent=n.name+' is thinking…';$('#log').appendChild(wait);
- try{
-  const r=await callLLM(sysPrompt(n),h.filter(m=>m.role!=='sys').map(m=>({role:m.role,text:m.text})));
-  wait.remove();apply(r,k);
- }catch(err){wait.remove();h.pop();say('Connection problem: '+err.message+'. Check your API key and model name.','sys',true);chips(h.chips||[])}
- S.busy=false;
+$('#f').onsubmit=e=>{e.preventDefault();const v=$('#txt').value.trim().toLowerCase();if(!v||S.over)return;$('#txt').value='';
+ const n=S.c.npcs[S.npc];if(S.npc==='dho'&&!gateOk())return;
+ say('user',v);
+ if(RUDE.test(v)){say('npc','Watch your tone. I will not be spoken to like that.');trust(-8,'Rude remark');chips();return}
+ let best=null,bs=0;n.topics.filter(t=>!S.asked.has(t.id)).forEach(t=>{const s=t.keys.filter(k=>v.includes(k)).length;if(s>bs){bs=s;best=t}});
+ best?run(best,false):(say('npc',n.fallback),chips())};
+function run(t,show){
+ const n=S.c.npcs[S.npc];if(show)say('user',t.label);
+ const nd=t.needs||{};
+ if((nd.trust&&S.trust<nd.trust)||(nd.topics||[]).some(x=>!S.asked.has(x))||(nd.ev||[]).some(x=>!S.ev.some(e=>e[0]===x))){say('npc',n.guarded);chips();return}
+ S.asked.add(t.id);say('npc',t.reply);
+ if(t.trust)trust(t.trust);
+ (t.ev||[]).forEach(([tag,note])=>{if(!S.ev.some(e=>e[0]===tag)){S.ev.push([tag,note]);say('sys','Logged '+tag,tag.includes('RedHerring')?'bad':'good')}});
+ (t.contacts||[]).forEach(c=>{const ex=S.nodes.get(c.id);ex?S.nodes.update({id:c.id,label:c.label}):S.nodes.add({id:c.id,label:c.label});
+  if(c.from&&!S.edges.get({filter:e=>e.from===c.from&&e.to===c.id}).length){S.edges.add({from:c.from,to:c.id});say('sys','Contact graph updated: '+c.label,'good')}});
+ renderEv();chips();
 }
-function apply(r,k){
- const h=S.chat[k];h.push({role:'assistant',text:r.reply});bubble(h[h.length-1]);
- h.chips=(r.chips||[]).slice(0,3);chips(h.chips);
- const d=Math.max(-20,Math.min(10,+r.trust_delta||0));
- if(d){S.trust=Math.max(0,Math.min(100,S.trust+d));say(`Village trust ${d>0?'+':''}${d}`,'sys',d<0);renderTrust()}
- (r.evidence||[]).forEach(e=>{const t=e.tag.startsWith('#')?e.tag:'#'+e.tag;
-  if(!S.ev.some(x=>x.tag===t)){S.ev.push({tag:t,note:e.note});say('Logged '+t,'sys')}});
- renderEv();
- (r.contacts||[]).forEach(c=>{const id=slug(c.id||c.label);addNode(id,c.label);
-  const from=c.linked_to&&S.nodes.get(slug(c.linked_to))?slug(c.linked_to):null;
-  if(from&&!S.edges.get({filter:e=>e.from===from&&e.to===id}).length){S.edges.add({from,to:id});say('Contact graph updated: '+c.label,'sys')}});
- if(S.trust<=0){S.over=true;say('Game over: villagers refuse to talk and are hiding patients. The investigation has failed.','sys',true);chips([])}
+function trust(d,why){
+ S.trust=Math.max(0,Math.min(100,S.trust+d));S.min=Math.min(S.min,S.trust);
+ if(d){say('sys',`Village trust ${d>0?'+':''}${d}${why?' ('+why+')':''}`,d<0?'bad':'good')}
+ $('#tb').style.width=S.trust+'%';$('#tb').style.background=S.trust<30?'var(--bad)':'var(--sig)';$('#tv').textContent=S.trust+'%';
+ if(S.trust<=0&&!S.over){S.over=true;say('sys','Game over: villagers refuse to talk and are hiding the sick. The investigation has failed.','bad');$('#rb').disabled=true}
 }
-function renderTrust(){
- $('#tbar').style.width=S.trust+'%';$('#tbar').style.background=S.trust<30?'var(--bad)':'var(--sig)';$('#tval').textContent=S.trust+'%'}
 function renderEv(){
- $('#ev').innerHTML=S.ev.length?S.ev.map(e=>`<span class="tag ${e.tag.includes('RedHerring')?'rh':''}" title="${(e.note||'').replace(/"/g,'')}">${e.tag}</span>`).join(''):'<span class="sub">Nothing logged yet.</span>'}
-
-/* ---------- Contact graph (vis-network) ---------- */
-function initGraph(){
- if(!window.vis){$('#graph').textContent='Graph library failed to load.';S.nodes={get:()=>null,add(){},update(){}};S.edges={add(){},get:()=>[],length:0};return}
- S.nodes=new vis.DataSet();S.edges=new vis.DataSet();
- S.net=new vis.Network($('#graph'),{nodes:S.nodes,edges:S.edges},{
-  nodes:{shape:'box',color:{background:'#dfe9e4',border:'#2f5d50'},font:{size:13,color:'#14242b'},margin:6},
-  edges:{arrows:'to',color:'#5d6c68'},physics:{stabilization:true}});
+ $('#ev').innerHTML=S.ev.length?S.ev.map(e=>`<span class="tag ${e[0].includes('RedHerring')?'rh':''}" title="${e[1]}">${e[0]}</span>`).join(''):'<span class="sub" style="color:var(--mute)">Nothing logged yet.</span>';
+ const ok=gateOk()&&!S.over;$('#rb').disabled=!ok;
+ $('#gate').textContent=ok?'Ready to report.':`To report: ${S.edges.length}/${S.c.gate.links} linked contacts, vector ${vec()?'found':'not found'}.`;
 }
-function addNode(id,label){if(!S.nodes.get(id))S.nodes.add({id,label})}
-Object.defineProperty(S,'edgesLen',{get:()=>S.edges.length});
-
-/* ---------- LLM module ---------- */
-function sysPrompt(n){const c=S.c;
-return `You are role-playing ${n.name}, ${n.role}, in an educational field-epidemiology game set in ${c.location_name}. Stay in character. Reply in 2-4 short sentences in plain village speech, not textbook language.
-HIDDEN TRUTH (never name the disease or give the diagnosis outright; let the investigator infer it): ${JSON.stringify(c.ground_truth)}. Red herrings villagers believe: ${JSON.stringify(c.red_herrings)}.
-YOUR KNOWLEDGE (only share what you would plausibly know): ${JSON.stringify(n)}.
-Reveal your key clue only when the investigator's question is relevant and respectful. If village trust is below 35, be guarded and withhold.
-STATE: village trust ${S.trust}/100. Evidence so far: ${S.ev.map(e=>e.tag).join(', ')||'none'}. Contact graph node ids: ${(S.nodes.get()||[]).map(x=>x.id+'='+x.label).join('; ')}.
-Rude, mocking or threatening behavior: trust_delta -5 to -20. Respect and cultural sensitivity: +2 to +10. Otherwise 0.
-Return ONLY JSON: {"reply":"...","chips":[{"strategy":"Clinical","text":"..."},{"strategy":"Empathetic","text":"..."},{"strategy":"Confrontational","text":"..."}],"trust_delta":0,"evidence":[{"tag":"#CamelCaseTag","note":"..."}],"contacts":[{"id":"slug","label":"Name","linked_to":"existing node id or null"}]}
-Add evidence or contacts only if your reply actually revealed them. Use #RedHerring_X tags when a red herring is ruled out. Chips are first-person lines the investigator could say next, each a distinct approach.`}
-
-async function callLLM(system,msgs){
- const {provider:p='gemini',key,model}=S.cfg;let txt;
- if(p==='gemini'){
-  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model||DEF.gemini}:generateContent?key=${encodeURIComponent(key)}`,{method:'POST',headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:msgs.map(m=>({role:m.role==='user'?'user':'model',parts:[{text:m.text}]})),generationConfig:{responseMimeType:'application/json'}})});
-  const j=await r.json();if(!r.ok)throw new Error(j.error?.message||r.status);txt=j.candidates[0].content.parts[0].text;
- }else{
-  const r=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+key},
-   body:JSON.stringify({model:model||DEF.openai,response_format:{type:'json_object'},messages:[{role:'system',content:system},...msgs.map(m=>({role:m.role,content:m.text}))]})});
-  const j=await r.json();if(!r.ok)throw new Error(j.error?.message||r.status);txt=j.choices[0].message.content;
- }
- try{return JSON.parse(txt.replace(/```json|```/g,'').trim())}catch(e){return {reply:txt,chips:[],trust_delta:0}}
-}
-
-/* ---------- Modals ---------- */
-function openKey(){$('#prov').value=S.cfg.provider||'gemini';$('#model').value=S.cfg.model||DEF[$('#prov').value];$('#key').value=S.cfg.key||'';$('#keyDlg').showModal()}
-$('#prov').onchange=()=>$('#model').value=DEF[$('#prov').value];
-$('#keyBtn').onclick=openKey;
-$('#saveKey').onclick=()=>{
- S.cfg={provider:$('#prov').value,model:$('#model').value.trim(),key:$('#key').value.trim()};
- try{sessionStorage.setItem('cfg',JSON.stringify(S.cfg))}catch(e){}
- $('#keyDlg').close();if(S.cfg.key&&S.npc&&!locked(S.npc)&&!(S.chat[S.npc]||[]).length)ask('(The investigator arrives and introduces themselves.)',true)};
-const repDlg=$('#repDlg');
-$('#reportBtn').onclick=()=>{$('#repMsg').textContent=(linkCount()>=3&&vectorFound())?'':'The District Health Officer will want 3 linked contacts and an identified vector first, but you can draft your report.';repDlg.showModal()};
-$('#subRep').onclick=()=>{$('#repMsg').textContent='Report saved. The AI Evaluator and grade card are the next module to build.'};
+/* ---------- Report + auto-grading ---------- */
+const R=()=>S.c.report;
+$('#rb').onclick=()=>{const r=R();
+ $('#r1').innerHTML=r.pathogen.options.map((o,i)=>`<option value="${i}">${o}</option>`).join('');
+ $('#r2').innerHTML=r.vector.options.map((o,i)=>`<option value="${i}">${o}</option>`).join('');
+ $('#r3').innerHTML=r.actions.map((a,i)=>`<label class="ck"><input type="checkbox" value="${i}">${a.t}</label>`).join('');
+ $('#card').hidden=true;$('#sub').disabled=false;rd.showModal()};
+$('#sub').onclick=()=>{
+ const r=R(),pick=[...document.querySelectorAll('#r3 input:checked')].map(x=>r.actions[+x.value]);
+ const p=+$('#r1').value===r.pathogen.answer,v=+$('#r2').value===r.vector.answer;
+ const diag=(p?20:0)+(v?20:0);
+ const have=r.required.filter(t=>S.ev.some(e=>e[0]===t));const meth=Math.round(20*have.length/r.required.length);
+ const rap=Math.min(15,Math.round(15*S.trust/S.c.start.trust)-(S.min<S.c.start.trust*.5?3:0));
+ const good=pick.filter(a=>a.good).length,bad=pick.length-good,tot=r.actions.filter(a=>a.good).length;
+ const con=Math.max(0,Math.round(25*good/tot-6*bad));
+ const sum=diag+meth+Math.max(0,rap)+con,L=sum>=90?'A':sum>=80?'B':sum>=70?'C':sum>=60?'D':'F';
+ const miss=r.required.filter(t=>!have.includes(t));
+ $('#card').textContent=`EPIDEMIOLOGY FIELD REPORT CARD\nFINAL GRADE: ${L} (${sum}/100)\n\nDIAGNOSTIC ACCURACY: ${diag}/40\n- Pathogen: ${p?'correct':'incorrect'}\n- Vector/route: ${v?'correct':'incorrect'}\n\nINVESTIGATION METHOD: ${meth}/20\n- Key evidence found: ${have.length}/${r.required.length}${miss.length?'\n- Missed: '+miss.join(', '):''}\n\nCOMMUNITY RAPPORT: ${Math.max(0,rap)}/15\n- Final trust ${S.trust}%, lowest ${S.min}%\n\nCONTAINMENT PLAN: ${con}/25\n- Sound actions: ${good}/${tot}; harmful or irrelevant: ${bad}`;
+ $('#card').hidden=false;$('#sub').disabled=true;
+};
 load();
-</script>
-</body></html>
+</script></body></html>
