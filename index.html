@@ -62,7 +62,25 @@ section.dlg{overflow:hidden}
 #log{position:absolute;inset:0;z-index:4;display:none;flex:none;background:rgba(238,241,236,.97);padding:46px 18px 18px;overflow:auto;flex-direction:column;gap:12px}#log.on{display:flex}
 #chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;padding:10px 18px 4px;max-height:30vh;overflow:auto;flex:none}
 form.row{flex:none}
-@media(max-width:800px){#stage{height:62vh}}
+header{padding:6px 14px;gap:14px}header h1{font-size:17px}
+main{grid-template-columns:176px 1fr}
+aside{padding:10px;gap:8px}
+aside .btn{width:100%;text-align:left;display:flex;justify-content:space-between}
+.loc{padding:6px 8px;margin-bottom:4px;font-size:14px}
+section.dlg{position:relative;overflow:hidden;height:100%}
+#stage{position:absolute;inset:0;height:auto;min-height:0}
+#sc{object-fit:cover;object-position:50% 30%}
+#stage.fb::before{display:none}
+#stage.fb::after{content:attr(data-i);position:absolute;left:50%;top:58%;transform:translate(-50%,-50%);width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.12);display:grid;place-items:center;color:#fff;font:600 46px Georgia,serif}
+.who{position:absolute;top:10px;left:10px;right:120px;z-index:6;background:transparent;border:0;padding:0;overflow-x:auto}
+.who button{box-shadow:0 1px 6px rgba(0,0,0,.35)}
+#bub{font-size:15px;overflow:auto}
+#you{bottom:72px}#toasts{bottom:72px}
+#log{padding-top:56px}
+#chips{position:absolute;left:12px;right:12px;bottom:64px;z-index:8;display:none;max-height:45%;padding:10px;border-radius:12px;background:rgba(12,24,28,.94)}
+#chips.open{display:grid}
+form.row{position:absolute;left:0;right:0;bottom:0;z-index:7;padding:26px 12px 12px;background:linear-gradient(transparent,rgba(12,24,28,.85))}
+@media(max-width:800px){main{grid-template-columns:1fr}aside{flex-direction:row;flex-wrap:wrap;align-items:center}aside .btn{width:auto}#locs{display:flex;flex-wrap:wrap;gap:4px}.loc{width:auto}section.dlg{height:78vh}}
 @media(max-width:800px){body{height:auto}main{grid-template-columns:1fr}aside{border-right:0}#log{min-height:50vh}.bar{width:100px}}
 :focus-visible{outline:3px solid var(--sig);outline-offset:2px}
 </style></head>
@@ -71,16 +89,18 @@ form.row{flex:none}
 <div class="trust">Village trust <div class="bar"><i id="tb"></i></div><b id="tv"></b></div></header>
 <main>
 <aside>
- <div><h2>Locations</h2><div id="locs"></div></div>
- <div><h2>Evidence notebook</h2><div class="tags" id="ev"></div></div>
- <div><h2>Contact tracing</h2><div id="graph"></div></div>
- <button class="btn" id="rb" disabled>Give final verdict</button>
+ <div class="sub" style="color:var(--mute)">Places</div><div id="locs"></div>
+ <button class="btn s" id="nbBtn">Notebook <b id="nbN">0</b></button>
+ <button class="btn s" id="gBtn">Contact map <b id="gN">0</b></button>
+ <button class="btn" id="rb" disabled>Final verdict</button>
  <div class="sub" id="gate" style="color:var(--mute)"></div>
 </aside>
 <section class="dlg"><div class="who" id="who"></div><div id="stage"><img id="sc" alt=""><svg id="tail"></svg><div id="bub"><b></b><span></span></div><div id="you"></div><div id="toasts"></div><button class="btn" id="hist">History</button><div id="log"></div></div><div id="chips"></div>
-<form class="row" id="f"><input id="txt" placeholder="Or type your own question…" autocomplete="off"><button class="btn">Send</button></form></section>
+<form class="row" id="f"><button type="button" class="btn" id="opt">Options</button><input id="txt" placeholder="Or type your own question…" autocomplete="off"><button class="btn">Send</button></form></section>
 </main>
 
+<dialog id="nbD"><h2>Evidence notebook</h2><p class="tags" id="ev"></p><form method="dialog"><button class="btn">Close</button></form></dialog>
+<dialog id="gD" style="max-width:780px"><h2>Contact tracing</h2><div id="graph" style="height:55vh;background:#fff;border:1px solid var(--line);border-radius:6px"></div><p><form method="dialog"><button class="btn">Close</button></form></p></dialog>
 <dialog id="rd"><h2>Final verdict</h2>
 <p class="sub" style="color:var(--mute)">Write in your own words. Be specific.</p>
 <label>1. Your diagnosis: pathogen and category</label><textarea id="r1" rows="2"></textarea>
@@ -99,7 +119,7 @@ async function load(){
  try{S.c=await(await fetch('data/'+id+'.json')).json()}catch(e){S.c=JSON.parse($('#emb').textContent)}
  const c=S.c;S.trust=S.min=c.start.trust;$('#cn').textContent=c.case_title+' · '+c.location_name;
  S.nodes=new vis.DataSet(c.start.nodes);S.edges=new vis.DataSet();
- new vis.Network($('#graph'),{nodes:S.nodes,edges:S.edges},{nodes:{shape:'box',color:{background:'#dfe9e4',border:'#2f5d50'},font:{size:13},margin:6},edges:{arrows:'to',color:'#5d6c68'}});
+
  renderLocs();
  trust(0);renderEv();goLoc(S.c.start.location);
  sysTo('__intro',c.intro,'intro');
@@ -107,7 +127,7 @@ async function load(){
 function sysTo(k,t,cls){(S.chat[k]=S.chat[k]||[]).push({role:'sys',text:t,cls});if(k===S.npc||k==='__intro')bubble({role:'sys',text:t,cls})}
 const unmet=l=>((l&&l.flags)||[]).some(f=>!S.flags.has(f));
 function renderLocs(){
- $('#locs').innerHTML=Object.entries(S.c.locations).map(([l,o])=>{const lk=unmet(o.lock);return `<button class="loc ${l===S.loc?'on':''}" data-l="${l}" ${lk?'disabled':''}>${lk?'🔒 ':''}${l}${lk?'<small>'+o.lock.msg+'</small>':''}</button>`}).join('');
+ $('#locs').innerHTML=Object.entries(S.c.locations).map(([l,o])=>{const lk=unmet(o.lock);return `<button class="loc ${l===S.loc?'on':''}" data-l="${l}" ${lk?`disabled title="${o.lock.msg}"`:''}>${lk?'🔒 ':''}${l}</button>`}).join('');
  document.querySelectorAll('.loc').forEach(b=>b.onclick=()=>goLoc(b.dataset.l));
 }
 function renderWho(){
@@ -129,20 +149,28 @@ function open(k){
 }
 let cur=null;
 const wn=m=>{const n=S.c.npcs[S.npc];return m.by==='att'&&n.att?n.att:n.name};
+const gopt={nodes:{shape:'box',color:{background:'#dfe9e4',border:'#2f5d50'},font:{size:14},margin:8},edges:{arrows:'to',color:'#5d6c68'}};
+$('#gBtn').onclick=()=>{$('#gD').showModal();if(!S.net)S.net=new vis.Network($('#graph'),{nodes:S.nodes,edges:S.edges},gopt);else{S.net.redraw();S.net.fit()}};
+$('#nbBtn').onclick=()=>$('#nbD').showModal();
+const showChips=on=>$('#chips').classList.toggle('open',on&&$('#chips').children.length>0);
+$('#txt').onfocus=()=>showChips(true);
+$('#chips').onmousedown=e=>e.preventDefault();
+$('#opt').onclick=()=>showChips(!$('#chips').classList.contains('open'));
+$('#stage').onclick=()=>{showChips(false);$('#txt').blur()};
 function stage(){const n=S.c.npcs[S.npc],s=$('#stage'),im=$('#sc');cur=null;$('#bub').style.display='none';$('#tail').innerHTML='';$('#you').textContent='';
- s.dataset.l=n.location;
+ s.dataset.l=n.location;s.dataset.i=n.name.split(' ').map(w=>w[0]).slice(0,2).join('');
  if(n.scene){s.className='';im.style.display='block';im.onload=place;im.onerror=()=>{s.className='fb';im.style.display='none';place()};im.src=n.scene}else{s.className='fb';im.style.display='none'}}
 function rect(){const st=$('#stage'),W=st.clientWidth,H=st.clientHeight,im=$('#sc');
- if(im.style.display!=='none'&&im.naturalWidth){const ar=im.naturalWidth/im.naturalHeight;let w=W,h=W/ar;if(h>H){h=H;w=H*ar}return{W,H,x:(W-w)/2,y:(H-h)/2,w,h,img:true}}
- return{W,H,x:0,y:0,w:W,h:H,img:false}}
-function place(){if(!cur)return;const r=rect(),b=$('#bub');b.style.display='block';
+ if(im.style.display!=='none'&&im.naturalWidth){const s=Math.max(W/im.naturalWidth,H/im.naturalHeight),w=im.naturalWidth*s,h=im.naturalHeight*s;return{W,H,x:(W-w)*.5,y:(H-h)*.3,w,h,img:true}}
+ return{W,H,img:false}}
+function place(){if(!cur)return;const r=rect(),b=$('#bub'),cl=(v,lo,hi)=>Math.max(lo,Math.min(v,hi));b.style.display='block';
  b.firstChild.textContent=cur.name;b.lastChild.textContent=cur.text;
- const px=r.x+r.w*cur.pos.x/100,py=r.y+r.h*cur.pos.y/100,spL=px-r.x,spR=r.x+r.w-px,right=spR>=spL;
- b.style.width='';b.style.maxWidth=(r.img?Math.max(240,Math.min(560,Math.max(spL,spR)-24)):Math.min(560,r.w-24))+'px';
- const bw=b.offsetWidth,cl=(v,lo,hi)=>Math.max(lo,Math.min(v,hi));
- let bl=r.img?(right?px+20:px-20-bw):px-bw/2;bl=cl(bl,r.x+8,r.x+r.w-bw-8);
- const bt=r.y+10;b.style.left=bl+'px';b.style.top=bt+'px';
- const bb=bt+b.offsetHeight,bx=cl(r.img?(right?bl+30:bl+bw-30):px,bl+28,bl+bw-28),ty=Math.max(bb+16,py);
+ let px,py;if(r.img){px=cl(r.x+r.w*cur.pos.x/100,30,r.W-30);py=cl(r.y+r.h*cur.pos.y/100,70,r.H-90)}else{px=r.W/2;py=r.H*.58-68}
+ const right=r.W-px>=px;
+ b.style.width='';b.style.maxHeight=r.H*.5+'px';b.style.maxWidth=(r.img?Math.max(240,Math.min(430,Math.max(px,r.W-px)-30)):Math.min(460,r.W-24))+'px';
+ const bw=b.offsetWidth;let bl=r.img?(right?px+24:px-24-bw):px-bw/2;bl=cl(bl,10,r.W-bw-10);
+ const bt=58;b.style.left=bl+'px';b.style.top=bt+'px';
+ const bb=bt+b.offsetHeight,bx=cl(r.img?(right?bl+34:bl+bw-34):px,bl+28,bl+bw-28),ty=Math.max(bb+18,py);
  $('#tail').innerHTML=`<polygon points="${bx-13},${bb-1} ${bx+13},${bb-1} ${px},${ty}" fill="#fff"/><polyline points="${bx-13},${bb} ${px},${ty} ${bx+13},${bb}" fill="none" stroke="#1b1b1b" stroke-width="2" stroke-linejoin="round"/><rect x="${bx-12}" y="${bb-3}" width="24" height="4" fill="#fff"/>`}
 window.addEventListener('resize',place);
 function showNpc(m){const n=S.c.npcs[S.npc];cur={name:wn(m),text:m.text,pos:(m.by==='att'&&n.attPos)||n.pos||{x:50,y:60}};place()}
@@ -160,7 +188,7 @@ function say(role,text,cls,by){const m={role,text,cls,by};S.chat[S.npc].push(m);
 function chips(){
  const n=S.c.npcs[S.npc],left=S.over?[]:n.topics.filter(t=>!S.asked.has(t.id));
  $('#chips').innerHTML=left.map(t=>`<button class="chip ${t.style}" data-i="${t.id}"><b>${t.style[0].toUpperCase()+t.style.slice(1)}</b>${t.label}</button>`).join('');
- document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>run(n.topics.find(t=>t.id===b.dataset.i),true));
+ document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{run(n.topics.find(t=>t.id===b.dataset.i),true);showChips(false);$('#txt').blur()});if(!$('#chips').children.length)$('#chips').classList.remove('open');
 }
 const STOP=new Set('the a an of to is are you your what who how did does do about me can ask tell was were with for and or in on at it this that have has any please'.split(' '));
 const stem=w=>w.replace(/(ing|ed|es|s)$/,'');
@@ -168,7 +196,7 @@ function lev(a,b){const d=[...Array(b.length+1).keys()];for(let i=1;i<=a.length;
 function score(v,t){const ws=v.split(/[^a-z]+/).filter(Boolean);let s=0;
  t.keys.forEach(k=>{if(v.includes(k))s+=2;else if(!k.includes(' ')&&k.length>=5&&ws.some(w=>w.length>=4&&lev(w,k)<=1))s+=1.5});
  t.label.toLowerCase().split(/[^a-z]+/).filter(w=>w.length>3&&!STOP.has(w)).forEach(w=>{if(ws.some(x=>stem(x)===stem(w)))s+=.7});return s}
-$('#f').onsubmit=e=>{e.preventDefault();const v=$('#txt').value.trim().toLowerCase();if(!v||S.over)return;$('#txt').value='';
+$('#f').onsubmit=e=>{e.preventDefault();showChips(false);const v=$('#txt').value.trim().toLowerCase();if(!v||S.over)return;$('#txt').value='';
  const n=S.c.npcs[S.npc];if(unmet(n.lock))return;
  say('user',v);
  if(RUDE.test(v)){say('npc','Watch your tone. I will not be spoken to like that.');trust(-8,'Rude remark');chips();return}
@@ -195,7 +223,7 @@ function trust(d,why){
  $('#tb').style.width=S.trust+'%';$('#tb').style.background=S.trust<30?'var(--bad)':'var(--sig)';$('#tv').textContent=S.trust+'%';
  if(S.trust<=0&&!S.over){S.over=true;say('sys','Game over: villagers refuse to talk and are hiding the sick. The investigation has failed.','bad');$('#rb').disabled=true}
 }
-function renderEv(){
+function renderEv(){$('#nbN').textContent=S.ev.length;$('#gN').textContent=S.edges.length;
  $('#ev').innerHTML=S.ev.length?S.ev.map(e=>`<span class="tag ${e[0].includes('RedHerring')?'rh':''}" title="${e[1]}">${e[0]}</span>`).join(''):'<span class="sub" style="color:var(--mute)">Nothing logged yet.</span>';
  const ok=gateOk()&&S.flags.has('permission')&&!S.over;$('#rb').disabled=!ok;
  $('#gate').textContent=ok?'Ready: return to the District Office to give your verdict.':`Verdict locked: ${S.edges.length}/${S.c.gate.links} linked contacts, vector ${vec()?'found':'not found'}.`;
