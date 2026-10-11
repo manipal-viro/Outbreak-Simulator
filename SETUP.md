@@ -18,15 +18,25 @@ assets/images/ (scene-*.jpg, miv-logo.jpg, case-01.jpg for the home card)
 
 ## Firebase
 1. Create a project at console.firebase.google.com and add a Web app.
-2. Authentication > Sign-in method: enable Google and Email/Password.
+2. Authentication > Sign-in method: enable Email/Password, Google, Apple and Anonymous (Apple also needs your Apple developer details).
 3. Authentication > Settings > Authorized domains: add your GitHub Pages domain (yourname.github.io).
 4. Firestore Database: create in production mode, then paste firestore.rules into the Rules tab and publish.
 5. Paste your web app config into firebase-config.js.
 
-Data stored per user:
-users/{uid}                    name, designation, institute, email
-users/{uid}/progress/{caseId}  saved game state
-users/{uid}/results/{caseId}   final grade and score breakdown
+Data stored per user (namespaced by app id, so several apps can share one Firebase project):
+apps/{appId}/users/{uid}                    name, designation, institute, email
+apps/{appId}/users/{uid}/progress/{caseId}  saved game state
+apps/{appId}/users/{uid}/results/{caseId}   final grade and score breakdown
+
+## App id (several apps on one GitHub account)
+GitHub Pages apps under the same account share one origin, so storage is shared too. Give each app its own id:
+- firebase-config.js: add  window.APP_ID='outbreak-sim';  (keep your own Firebase keys, do not overwrite the file)
+- sw.js: set  const APP_ID='outbreak-sim';  to the same value
+The id prefixes cache names, local storage keys (offline progress, profile) and Firestore paths.
+
+## Offline use
+Anyone can choose "Continue offline on this device": progress, profile and results stay in local storage.
+Signing in later syncs the newest saved progress to the cloud.
 
 ## Releasing an update
 Edit files, upload, then bump VERSION in sw.js (v1 to v2). Online users get the new files at once

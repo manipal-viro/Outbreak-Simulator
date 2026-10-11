@@ -5,7 +5,7 @@
  "start_url": "./",
  "scope": "./",
  "display": "standalone",
- "orientation": "any",
+ "orientation": "landscape",
  "background_color": "#ffffff",
  "theme_color": "#22282e",
  "icons": [
@@ -27,5 +27,6 @@
    "type": "image/png",
    "purpose": "maskable"
   }
- ]
+ ],
+ "id": "outbreak-sim-app"
 }
