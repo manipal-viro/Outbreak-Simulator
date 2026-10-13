@@ -1,7 +1,7 @@
 const APP_ID='outbreak-sim'; // must match APP_ID in firebase-config.js; unique per app
-const VERSION='v2'; // bump on each deploy so users see the "Update now" banner
+const VERSION='v3'; // bump on each deploy so users see the "Update now" banner
 const CACHE=APP_ID+'-'+VERSION;
-const SHELL=['./','index.html','manifest.webmanifest','firebase-config.js','data/cases.json','data/case-01.json','assets/images/miv-logo.jpg','icons/icon-192.png','icons/icon-512.png'];
+const SHELL=['./','index.html','manifest.webmanifest','firebase-config.js','data/cases.json','data/case-01.json','data/lab-catalog.json','assets/images/miv-logo.jpg','icons/icon-192.png','icons/icon-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>Promise.all(SHELL.map(u=>c.add(u).catch(()=>{})))))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith(APP_ID+'-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 self.addEventListener('message',e=>{if(e.data==='SKIP_WAITING')self.skipWaiting()});
