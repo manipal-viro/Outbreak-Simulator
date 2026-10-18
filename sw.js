@@ -1,5 +1,5 @@
 const APP_ID='outbreak-sim'; // must match APP_ID in firebase-config.js; unique per app
-const VERSION='v7'; // bump on each deploy so users see the "Update now" banner
+const VERSION='v10'; // bump on each deploy so users see the "Update now" banner
 const CACHE=APP_ID+'-'+VERSION;
 const SHELL=['./','index.html','manifest.webmanifest','firebase-config.js','data/cases.json','data/case-01.json','data/lab-catalog.json','assets/images/miv-logo.jpg','icons/icon-192.png','icons/icon-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>Promise.all(SHELL.map(u=>c.add(u).catch(()=>{})))))});
